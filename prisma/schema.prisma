@@ -1,0 +1,170 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  admin
+  pdv
+  transportista
+}
+
+enum EstadoEnvio {
+  a_retirar
+  en_deposito
+  en_camino
+  entregado
+  observacion
+  cancelado
+}
+
+enum CanalAlerta {
+  whatsapp
+  sms
+}
+
+enum EstadoMensaje {
+  pendiente
+  enviado
+  fallido
+}
+
+enum EventoAlerta {
+  registrado
+  deposito
+  camino
+  entregado
+  manual
+}
+
+model PuntoDeVenta {
+  id        String   @id @default(uuid())
+  nombre    String
+  direccion String?
+  contacto  String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  users  User[]
+  envios Envio[]
+
+  @@map("puntos_de_venta")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  fullName     String   @map("full_name")
+  role         Role
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  pdvId String?       @map("pdv_id")
+  pdv   PuntoDeVenta? @relation(fields: [pdvId], references: [id])
+
+  enviosAsignados Envio[]          @relation("TransportistaEnvios")
+  historial       EnvioHistorial[]
+
+  @@map("users")
+}
+
+model Zona {
+  id        String   @id @default(uuid())
+  nombre    String
+  grupo     String
+  costo     Decimal  @db.Decimal(10, 2)
+  isActive  Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+
+  envios Envio[]
+
+  @@map("zonas")
+}
+
+model Envio {
+  id          String      @id @default(uuid())
+  numeroEnvio String      @unique @map("numero_envio")
+  estado      EstadoEnvio @default(a_retirar)
+
+  pdvId String       @map("pdv_id")
+  pdv   PuntoDeVenta @relation(fields: [pdvId], references: [id])
+
+  zonaId String @map("zona_id")
+  zona   Zona   @relation(fields: [zonaId], references: [id])
+
+  transportistaId String? @map("transportista_id")
+  transportista   User?   @relation("TransportistaEnvios", fields: [transportistaId], references: [id])
+
+  costoEnvio Decimal @map("costo_envio") @db.Decimal(10, 2)
+
+  compradorNombre   String @map("comprador_nombre")
+  compradorApellido String @map("comprador_apellido")
+  compradorDni      String @map("comprador_dni")
+  compradorTelefono String @map("comprador_telefono")
+
+  entregaDireccion String @map("entrega_direccion")
+  entregaLocalidad String @map("entrega_localidad")
+
+  trackingToken String @unique @default(uuid()) @map("tracking_token")
+
+  dniVerificadoAt DateTime? @map("dni_verificado_at")
+  entregadoAt     DateTime? @map("entregado_at")
+
+  observaciones String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  historial       EnvioHistorial[]
+  alertasEnviadas AlertaEnviada[]
+
+  @@map("envios")
+}
+
+model EnvioHistorial {
+  id             String      @id @default(uuid())
+  estadoAnterior EstadoEnvio @map("estado_anterior")
+  estadoNuevo    EstadoEnvio @map("estado_nuevo")
+  nota           String?
+  createdAt      DateTime    @default(now())
+
+  envioId String @map("envio_id")
+  envio   Envio  @relation(fields: [envioId], references: [id])
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@map("envio_historial")
+}
+
+model AlertaEnviada {
+  id          String        @id @default(uuid())
+  tipo        EventoAlerta
+  canal       CanalAlerta
+  mensaje     String        @db.Text
+  estadoEnvio EstadoMensaje @default(pendiente) @map("estado_envio")
+  sentAt      DateTime?     @map("sent_at")
+  createdAt   DateTime      @default(now())
+
+  envioId String @map("envio_id")
+  envio   Envio  @relation(fields: [envioId], references: [id])
+
+  @@map("alertas_enviadas")
+}
+
+model PlantillaAlerta {
+  id        String       @id @default(uuid())
+  evento    EventoAlerta
+  canal     CanalAlerta
+  cuerpo    String       @db.Text
+  activa    Boolean      @default(true)
+  updatedAt DateTime     @updatedAt
+
+  @@unique([evento, canal])
+  @@map("plantillas_alertas")
+}
