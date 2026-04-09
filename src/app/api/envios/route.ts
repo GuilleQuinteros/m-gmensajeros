@@ -5,6 +5,8 @@ import { generarNumeroEnvio } from "@/lib/numeroEnvio";
 import { enviarAlerta } from "@/lib/whatsapp";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic"
+
 const createSchema = z.object({
   compradorNombre: z.string().min(1),
   compradorApellido: z.string().min(1),

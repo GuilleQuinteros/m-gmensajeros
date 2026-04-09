@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 import { enviarAlerta } from "@/lib/whatsapp";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const { error } = await requireAuth(["admin"]);
   if (error) return error;
@@ -33,6 +35,5 @@ export async function POST(req: NextRequest) {
   }
 
   await enviarAlerta(envio as any, "manual");
-
   return NextResponse.json({ ok: true });
 }

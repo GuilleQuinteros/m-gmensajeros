@@ -4,6 +4,8 @@ import { requireAuth } from "@/lib/auth";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 
+export const dynamic = "force-dynamic"
+
 export async function GET(req: NextRequest) {
   const { error } = await requireAuth(["admin"]);
   if (error) return error;

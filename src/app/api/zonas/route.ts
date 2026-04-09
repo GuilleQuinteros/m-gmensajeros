@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic"
+
 export async function GET(req: NextRequest) {
   const { error } = await requireAuth(["admin", "pdv"]);
   if (error) return error;

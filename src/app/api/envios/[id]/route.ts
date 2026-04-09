@@ -7,6 +7,8 @@ const patchSchema = z.object({
   transportistaId: z.string().uuid().optional(),
 });
 
+export const dynamic = "force-dynamic"
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: { id: string } }

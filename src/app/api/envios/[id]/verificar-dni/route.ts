@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic"
+
 const schema = z.object({ dniEscaneado: z.string().min(7) });
 
 export async function POST(

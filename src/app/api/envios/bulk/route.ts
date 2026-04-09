@@ -4,6 +4,8 @@ import { requireAuth } from "@/lib/auth";
 import { generarNumeroEnvio } from "@/lib/numeroEnvio";
 import { enviarAlerta } from "@/lib/whatsapp";
 
+export const dynamic = "force-dynamic"
+
 interface BulkRow {
   nombre: string;
   apellido: string;
