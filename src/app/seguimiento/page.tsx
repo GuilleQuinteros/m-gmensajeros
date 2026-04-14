@@ -1,12 +1,15 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
+  
 export default function SeguimientoPage() {
   const router = useRouter();
   const [nro, setNro] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  
+
 
   async function buscar(e: React.FormEvent) {
     e.preventDefault();

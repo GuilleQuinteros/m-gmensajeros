@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 import { z } from "zod";
 
-export const dynamic = "force-dynamic"
+export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const { error } = await requireAuth(["admin", "pdv"]);
@@ -14,7 +14,13 @@ export async function GET(req: NextRequest) {
 
   const zonas = await prisma.zona.findMany({
     where: all ? {} : { isActive: true },
-    orderBy: [{ grupo: "asc" }, { nombre: "asc" }],
+    include: {
+      transportistas: {
+        where: { isActive: true },
+        include: { transportista: { select: { id: true, fullName: true } } },
+      },
+    },
+    orderBy: { nombre: "asc" },
   });
 
   return NextResponse.json(zonas);
@@ -22,7 +28,7 @@ export async function GET(req: NextRequest) {
 
 const createSchema = z.object({
   nombre: z.string().min(1),
-  grupo: z.string().min(1),
+  slaHoras: z.number().int().positive(),
   costo: z.number().positive(),
 });
 

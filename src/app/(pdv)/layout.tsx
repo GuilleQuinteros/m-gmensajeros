@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { redirect } from "next/navigation";
-import { PdvSidebar } from "./sidebar";
+import { PdvNav } from "./sidebar";
 
 export default async function PdvLayout({
   children,
@@ -17,9 +17,9 @@ export default async function PdvLayout({
   const userName = session.user?.name ?? "";
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <PdvSidebar pdvName={pdvName} userName={userName} />
-      <main className="flex-1 overflow-auto bg-gray-50 p-6">{children}</main>
+    <div className="min-h-screen bg-gray-50">
+      <PdvNav pdvName={pdvName} userName={userName} />
+      <main className="max-w-2xl mx-auto px-4 py-6">{children}</main>
     </div>
   );
 }

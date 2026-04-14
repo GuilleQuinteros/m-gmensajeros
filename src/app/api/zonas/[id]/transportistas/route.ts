@@ -5,14 +5,12 @@ import { z } from "zod";
 
 export const dynamic = "force-dynamic";
 
-const patchSchema = z.object({
-  nombre: z.string().min(1).optional(),
-  slaHoras: z.number().int().positive().optional(),
-  costo: z.number().positive().optional(),
+const schema = z.object({
+  transportistaId: z.string().uuid(),
   isActive: z.boolean().optional(),
 });
 
-export async function PATCH(
+export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
@@ -20,28 +18,39 @@ export async function PATCH(
   if (error) return error;
 
   const body = await req.json();
-  const parsed = patchSchema.safeParse(body);
+  const parsed = schema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const zona = await prisma.zona.update({
-    where: { id: params.id },
-    data: parsed.data,
+  const rel = await prisma.zonaTransportista.upsert({
+    where: {
+      zonaId_transportistaId: {
+        zonaId: params.id,
+        transportistaId: parsed.data.transportistaId,
+      },
+    },
+    update: { isActive: parsed.data.isActive ?? true },
+    create: {
+      zonaId: params.id,
+      transportistaId: parsed.data.transportistaId,
+    },
   });
 
-  return NextResponse.json(zona);
+  return NextResponse.json(rel);
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   const { error } = await requireAuth(["admin"]);
   if (error) return error;
 
-  await prisma.zona.update({
-    where: { id: params.id },
+  const { transportistaId } = await req.json();
+
+  await prisma.zonaTransportista.updateMany({
+    where: { zonaId: params.id, transportistaId },
     data: { isActive: false },
   });
 

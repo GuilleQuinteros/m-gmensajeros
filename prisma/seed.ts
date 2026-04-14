@@ -51,25 +51,17 @@ async function main() {
     },
   });
 
+  // Tres zonas base segun cliente
   const zonas = [
-    { id: "la-matanza",      nombre: "La Matanza",      grupo: "Oeste", costo: 3500 },
-    { id: "moron",           nombre: "Moron",            grupo: "Oeste", costo: 3000 },
-    { id: "merlo",           nombre: "Merlo",            grupo: "Oeste", costo: 3800 },
-    { id: "quilmes",         nombre: "Quilmes",          grupo: "Sur",   costo: 3600 },
-    { id: "lanus",           nombre: "Lanus",            grupo: "Sur",   costo: 3200 },
-    { id: "lomas-de-zamora", nombre: "Lomas de Zamora",  grupo: "Sur",   costo: 3400 },
-    { id: "tigre",           nombre: "Tigre",            grupo: "Norte", costo: 4200 },
-    { id: "san-isidro",      nombre: "San Isidro",       grupo: "Norte", costo: 3800 },
-    { id: "vicente-lopez",   nombre: "Vicente Lopez",    grupo: "Norte", costo: 3500 },
-    { id: "caba-centro",     nombre: "CABA Centro",      grupo: "CABA",  costo: 2800 },
-    { id: "caba-norte",      nombre: "CABA Norte",       grupo: "CABA",  costo: 2900 },
-    { id: "caba-sur",        nombre: "CABA Sur",         grupo: "CABA",  costo: 2900 },
+    { id: "caba-24",      nombre: "CABA 24hs",      slaHoras: 24, costo: 3500 },
+    { id: "provincia-24", nombre: "Provincia 24hs",  slaHoras: 24, costo: 4500 },
+    { id: "provincia-96", nombre: "Provincia 96hs",  slaHoras: 96, costo: 3000 },
   ];
 
   for (const z of zonas) {
     await prisma.zona.upsert({
       where: { id: z.id },
-      update: { costo: z.costo },
+      update: { costo: z.costo, slaHoras: z.slaHoras },
       create: z,
     });
   }
@@ -105,7 +97,7 @@ async function main() {
     });
   }
 
-  console.log("Seed completado exitosamente.");
+  console.log("Seed completado.");
 }
 
 main()

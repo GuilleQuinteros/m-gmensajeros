@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
@@ -68,8 +68,9 @@ model User {
   pdvId String?       @map("pdv_id")
   pdv   PuntoDeVenta? @relation(fields: [pdvId], references: [id])
 
-  enviosAsignados Envio[]          @relation("TransportistaEnvios")
+  enviosAsignados Envio[]             @relation("TransportistaEnvios")
   historial       EnvioHistorial[]
+  zonasAsignadas  ZonaTransportista[] @relation("TransportistaZonas")
 
   @@map("users")
 }
@@ -77,20 +78,36 @@ model User {
 model Zona {
   id        String   @id @default(uuid())
   nombre    String
-  grupo     String
+  slaHoras  Int      @default(24) @map("sla_horas")
   costo     Decimal  @db.Decimal(10, 2)
   isActive  Boolean  @default(true)
   updatedAt DateTime @updatedAt
 
-  envios Envio[]
+  envios         Envio[]
+  transportistas ZonaTransportista[]
 
   @@map("zonas")
 }
 
+model ZonaTransportista {
+  id              String   @id @default(uuid())
+  zonaId          String   @map("zona_id")
+  transportistaId String   @map("transportista_id")
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  zona          Zona @relation(fields: [zonaId], references: [id])
+  transportista User @relation("TransportistaZonas", fields: [transportistaId], references: [id])
+
+  @@unique([zonaId, transportistaId])
+  @@map("zona_transportista")
+}
+
 model Envio {
-  id          String      @id @default(uuid())
-  numeroEnvio String      @unique @map("numero_envio")
-  estado      EstadoEnvio @default(a_retirar)
+  id           String      @id @default(uuid())
+  numeroEnvio  String      @unique @map("numero_envio")
+  remitoNumero String?     @unique @map("remito_numero")
+  estado       EstadoEnvio @default(a_retirar)
 
   pdvId String       @map("pdv_id")
   pdv   PuntoDeVenta @relation(fields: [pdvId], references: [id])

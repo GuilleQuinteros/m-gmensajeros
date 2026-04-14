@@ -4,14 +4,10 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 
 const ESTADO_LABEL: Record<string, string> = {
-  a_retirar: "A retirar",
-  en_deposito: "En deposito",
-  en_camino: "En camino",
-  entregado: "Entregado",
-  observacion: "Observacion",
-  cancelado: "Cancelado",
+  a_retirar: "A retirar", en_deposito: "En deposito",
+  en_camino: "En camino", entregado: "Entregado",
+  observacion: "Observacion", cancelado: "Cancelado",
 };
-
 const ESTADO_SIGUIENTE: Record<string, string[]> = {
   a_retirar:   ["en_deposito", "cancelado"],
   en_deposito: ["en_camino", "cancelado"],
@@ -20,7 +16,6 @@ const ESTADO_SIGUIENTE: Record<string, string[]> = {
   entregado:   [],
   cancelado:   [],
 };
-
 const ESTADO_COLOR: Record<string, string> = {
   a_retirar:   "bg-purple-100 text-purple-800",
   en_deposito: "bg-teal-100 text-teal-800",
@@ -37,7 +32,8 @@ interface Envio {
   compradorDni: string; compradorTelefono: string;
   entregaDireccion: string; entregaLocalidad: string;
   costoEnvio: number; trackingToken: string;
-  zona: { nombre: string };
+  remitoNumero: string | null;
+  zona: { nombre: string; slaHoras: number };
   pdv: { nombre: string };
   transportista: { id: string; fullName: string } | null;
   historial: { id: string; estadoNuevo: string; createdAt: string; nota: string | null; user: { fullName: string } }[];
@@ -106,7 +102,7 @@ export default function EnvioDetallePage() {
 
   async function enviarAlertaManual() {
     setSaving(true);
-    await fetch(`/api/alertas`, {
+    await fetch("/api/alertas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ envioId: params.id }),
@@ -116,6 +112,10 @@ export default function EnvioDetallePage() {
     setSaving(false);
   }
 
+  function generarRemito() {
+    window.open(`/api/envios/${params.id}/remito`, "_blank");
+  }
+
   if (loading) return <div className="text-sm text-gray-400 p-6">Cargando...</div>;
   if (!envio) return <div className="text-sm text-red-500 p-6">Envio no encontrado.</div>;
 
@@ -123,18 +123,38 @@ export default function EnvioDetallePage() {
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-6">
-        <Link href="/admin/envios" className="text-sm text-gray-400 hover:text-gray-600">← Volver</Link>
-        <h1 className="text-xl font-semibold">{envio.numeroEnvio}</h1>
-        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${ESTADO_COLOR[envio.estado]}`}>
-          {ESTADO_LABEL[envio.estado]}
-        </span>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <Link href="/admin/envios" className="text-sm text-gray-400 hover:text-gray-600">
+            &larr; Volver
+          </Link>
+          <h1 className="text-xl font-semibold">{envio.numeroEnvio}</h1>
+          <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${ESTADO_COLOR[envio.estado]}`}>
+            {ESTADO_LABEL[envio.estado]}
+          </span>
+          {envio.remitoNumero && (
+            <span className="text-xs text-gray-400">Remito: {envio.remitoNumero}</span>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={generarRemito}
+            className="text-sm border border-amber-600 text-amber-700 px-4 py-2 rounded-lg hover:bg-amber-50"
+          >
+            Generar remito PDF
+          </button>
+          <button
+            onClick={enviarAlertaManual}
+            disabled={saving}
+            className="text-sm border border-green-600 text-green-700 px-4 py-2 rounded-lg hover:bg-green-50 disabled:opacity-50"
+          >
+            Enviar alerta WA
+          </button>
+        </div>
       </div>
 
       {msg && (
-        <div className="mb-4 bg-green-50 text-green-700 text-sm px-4 py-2.5 rounded-lg">
-          {msg}
-        </div>
+        <div className="mb-4 bg-green-50 text-green-700 text-sm px-4 py-2.5 rounded-lg">{msg}</div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -147,7 +167,7 @@ export default function EnvioDetallePage() {
               ["Telefono", envio.compradorTelefono],
               ["Direccion", envio.entregaDireccion],
               ["Localidad", envio.entregaLocalidad],
-              ["Zona", envio.zona.nombre],
+              ["Zona", envio.zona ? `${envio.zona.nombre} (${envio.zona.slaHoras}hs)` : "Sin zona"],
               ["Costo envio", `$${Number(envio.costoEnvio).toLocaleString("es-AR")}`],
               ["PDV origen", envio.pdv.nombre],
               ["Transportista", envio.transportista?.fullName ?? "Sin asignar"],
@@ -162,7 +182,6 @@ export default function EnvioDetallePage() {
         </div>
 
         <div className="space-y-4">
-          {/* Cambiar estado */}
           {siguientes.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-100 p-5">
               <h2 className="text-sm font-semibold text-gray-700 mb-4">Cambiar estado</h2>
@@ -195,7 +214,6 @@ export default function EnvioDetallePage() {
             </div>
           )}
 
-          {/* Asignar transportista */}
           <div className="bg-white rounded-xl border border-gray-100 p-5">
             <h2 className="text-sm font-semibold text-gray-700 mb-4">Asignar transportista</h2>
             <div className="flex gap-2">
@@ -218,25 +236,9 @@ export default function EnvioDetallePage() {
               </button>
             </div>
           </div>
-
-          {/* Alerta manual */}
-          <div className="bg-white rounded-xl border border-gray-100 p-5">
-            <h2 className="text-sm font-semibold text-gray-700 mb-3">Notificacion manual</h2>
-            <p className="text-xs text-gray-400 mb-3">
-              Envia una alerta WhatsApp al comprador con el estado actual del envio.
-            </p>
-            <button
-              onClick={enviarAlertaManual}
-              disabled={saving}
-              className="w-full border border-green-600 text-green-700 text-sm px-4 py-2.5 rounded-lg hover:bg-green-50 disabled:opacity-50"
-            >
-              Enviar alerta WhatsApp
-            </button>
-          </div>
         </div>
       </div>
 
-      {/* Timeline */}
       <div className="bg-white rounded-xl border border-gray-100 p-5 mb-4">
         <h2 className="text-sm font-semibold text-gray-700 mb-4">Timeline</h2>
         <ol className="space-y-4">
@@ -248,7 +250,7 @@ export default function EnvioDetallePage() {
               <div>
                 <p className="text-sm font-medium">{ESTADO_LABEL[h.estadoNuevo]}</p>
                 <p className="text-xs text-gray-400">
-                  {new Date(h.createdAt).toLocaleString("es-AR")} — {h.user.fullName}
+                  {new Date(h.createdAt).toLocaleString("es-AR")} &mdash; {h.user.fullName}
                 </p>
                 {h.nota && <p className="text-xs text-gray-500 mt-0.5">{h.nota}</p>}
               </div>
@@ -257,7 +259,6 @@ export default function EnvioDetallePage() {
         </ol>
       </div>
 
-      {/* Alertas enviadas */}
       <div className="bg-white rounded-xl border border-gray-100 p-5">
         <h2 className="text-sm font-semibold text-gray-700 mb-4">Alertas enviadas</h2>
         {envio.alertasEnviadas.length === 0 ? (
@@ -284,7 +285,7 @@ export default function EnvioDetallePage() {
                     }`}>{a.estadoEnvio}</span>
                   </td>
                   <td className="py-2 px-3 text-gray-400 text-xs">
-                    {a.sentAt ? new Date(a.sentAt).toLocaleString("es-AR") : "—"}
+                    {a.sentAt ? new Date(a.sentAt).toLocaleString("es-AR") : "-"}
                   </td>
                 </tr>
               ))}

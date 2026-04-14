@@ -47,7 +47,42 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(envios);
 }
 
+// Busca el transportista con menos carga activa para la zona
+async function getTransportistaParaZona(zonaId: string): Promise<string | null> {
+  const asignaciones = await prisma.zonaTransportista.findMany({
+    where: { zonaId, isActive: true },
+    include: {
+      transportista: {
+        select: {
+          id: true,
+          _count: false,
+        },
+      },
+    },
+  });
+
+  if (asignaciones.length === 0) return null;
+
+  // Contar envíos activos por transportista
+  const cargas = await Promise.all(
+    asignaciones.map(async (a) => {
+      const count = await prisma.envio.count({
+        where: {
+          transportistaId: a.transportistaId,
+          estado: { in: ["en_deposito", "en_camino"] },
+        },
+      });
+      return { id: a.transportistaId, count };
+    })
+  );
+
+  // Elegir el de menor carga
+  cargas.sort((a, b) => a.count - b.count);
+  return cargas[0].id;
+}
+
 export async function POST(req: NextRequest) {
+  
   const { error, session } = await requireAuth(["admin", "pdv"]);
   if (error) return error;
 
@@ -68,6 +103,8 @@ if (!parsed.success) {
 
   // Si es admin sin pdvId, buscar o usar el primer PDV disponible
   if (!pdvId && role === "admin") {
+    // Asignacion automatica de transportista por zona
+    const transportistaId = await getTransportistaParaZona(data.zonaId);
     const primerPdv = await prisma.puntoDeVenta.findFirst({
       where: { isActive: true },
       select: { id: true },
@@ -96,10 +133,11 @@ if (!parsed.success) {
   const numeroEnvio = await generarNumeroEnvio();
 
   const envio = await prisma.envio.create({
-    data: {
-      numeroEnvio,
-      pdvId,
-      zonaId: data.zonaId,
+  data: {
+    numeroEnvio,
+    pdvId,
+    zonaId: data.zonaId,
+    transportistaId: transportistaId ?? undefined,
       costoEnvio: zona.costo,
       compradorNombre: data.compradorNombre,
       compradorApellido: data.compradorApellido,
