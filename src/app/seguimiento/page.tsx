@@ -1,16 +1,15 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-  
+
+
+
 export default function SeguimientoPage() {
   const router = useRouter();
   const [nro, setNro] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
   
-
-
   async function buscar(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -24,7 +23,7 @@ export default function SeguimientoPage() {
     const data = await res.json();
     router.push(`/t/${data.trackingToken}`);
   }
-
+  
   return (
     <div className="min-h-screen bg-amber-50 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">

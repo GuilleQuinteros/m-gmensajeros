@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
   });
 
   const zonas = await prisma.zona.findMany({
-    select: { id: true, nombre: true, grupo: true },
+    select: { id: true, nombre: true, slaHoras: true },
   });
   const zonaMap = Object.fromEntries(zonas.map(z => [z.id, z]));
 
@@ -74,7 +74,7 @@ export async function GET(req: NextRequest) {
     },
     porZona: porZona.map(r => ({
       zona: zonaMap[r.zonaId]?.nombre ?? r.zonaId,
-      grupo: zonaMap[r.zonaId]?.grupo ?? "",
+      grupo: `${zonaMap[r.zonaId]?.slaHoras ?? ""}hs`,
       envios: r._count.id,
       total: r._sum.costoEnvio ?? 0,
     })),

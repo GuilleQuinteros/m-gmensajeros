@@ -5,14 +5,14 @@ import Link from "next/link";
 
 export default async function RootPage() {
   const session = await getServerSession(authOptions);
-
+  
   if (session) {
     const role = (session.user as any).role;
     if (role === "admin") redirect("/admin/dashboard");
     if (role === "pdv") redirect("/pdv/mis-envios");
     if (role === "transportista") redirect("/trans/mis-envios");
   }
-
+    
   return (
     <div style={{ fontFamily: "var(--font-sans)" }}>
       {/* Nav */}
@@ -41,9 +41,10 @@ export default async function RootPage() {
           </Link>
         </div>
       </section>
-
+      
       {/* Tracking band */}
       <section style={{ background:"#B8860B", padding:32 }}>
+        
         <div style={{ maxWidth:520, margin:"0 auto", textAlign:"center" }}>
           <h2 style={{ fontSize:20, fontWeight:700, color:"#fff", marginBottom:6 }}>Rastrear mi envio</h2>
           <p style={{ fontSize:13, color:"#fde68a", marginBottom:18 }}>Ingresa el numero que recibiste por WhatsApp. Ejemplo: ENV-0042</p>
