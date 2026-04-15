@@ -131,7 +131,7 @@ if (!parsed.success) {
   }
 
   const numeroEnvio = await generarNumeroEnvio();
-
+  const transportistaId = await getTransportistaParaZona(data.zonaId);
   const envio = await prisma.envio.create({
   data: {
     numeroEnvio,
