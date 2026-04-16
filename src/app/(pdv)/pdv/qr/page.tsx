@@ -113,40 +113,44 @@ export default function QRPage() {
   }
 
   async function guardarTodos() {
-    if (!zonaId) {
-      setError("Selecciona una zona antes de guardar.");
-      return;
-    }
-    setGuardando(true);
-    setError("");
-
-    const rows = envios.map(e => ({
-      nombre: e.nombre,
-      apellido: e.apellido,
-      dni: e.dni,
-      telefono: e.telefono,
-      direccion: e.direccion,
-      localidad: e.localidad,
-      zona: zonas.find(z => z.id === zonaId)?.nombre ?? "",
-    }));
-
-    const res = await fetch("/api/envios/bulk", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ rows }),
-    });
-
-    const data = await res.json();
-    setGuardando(false);
-
-    if (data.creados > 0) {
-      setMsg(`${data.creados} envios registrados correctamente.`);
-      setTimeout(() => router.push("/pdv/mis-envios"), 1500);
-    }
-    if (data.errores?.length > 0) {
-      setError(`Errores: ${data.errores.join(", ")}`);
-    }
+  // Verificar que todos tengan zona, si no pedir selección
+  const sinZona = envios.filter(e => !e.zonaId);
+  if (sinZona.length > 0 && !zonaId) {
+    setError(`${sinZona.length} envio(s) sin zona. Selecciona una zona para aplicar a todos.`);
+    return;
   }
+  setGuardando(true);
+  setError("");
+
+  const rows = envios.map(e => ({
+    nombre: e.nombre,
+    apellido: e.apellido,
+    dni: e.dni,
+    telefono: e.telefono,
+    direccion: e.direccion,
+    localidad: e.localidad,
+    // Usar zonaId del QR si existe, sino el seleccionado manualmente
+    zonaId: e.zonaId ?? zonaId,
+    zona: e.zonaNombre ?? zonas.find(z => z.id === zonaId)?.nombre ?? "",
+  }));
+
+  const res = await fetch("/api/envios/bulk", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ rows }),
+  });
+
+  const data = await res.json();
+  setGuardando(false);
+
+  if (data.creados > 0) {
+    setMsg(`${data.creados} envios registrados correctamente.`);
+    setTimeout(() => router.push("/pdv/mis-envios"), 1500);
+  }
+  if (data.errores?.length > 0) {
+    setError(`Errores: ${data.errores.join(", ")}`);
+  }
+}
 
   return (
     <div>
@@ -244,7 +248,8 @@ export default function QRPage() {
 
           <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-3">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Zona para todos los envios *</label>
+              <label className="block text-xs text-gray-500 mb-1">Zona para envios sin zona asignada (opcional si el QR ya la trae)
+                  </label>
               <select
                 value={zonaId}
                 onChange={e => setZonaId(e.target.value)}

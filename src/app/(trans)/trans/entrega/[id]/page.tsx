@@ -31,27 +31,32 @@ export default function EntregaPage() {
 
   // Iniciar scanner de barcode/QR para DNI
   useEffect(() => {
-    if (scanMode !== "camara") return;
-    let scanner: any;
-    import("html5-qrcode").then(({ Html5Qrcode }) => {
-      scanner = new Html5Qrcode("dni-scanner");
-      scanner.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 280, height: 120 } },
-        (decodedText: string) => {
-          // DNI argentino PDF417: campo 1 contiene el numero
-          // Formato: "00@APELLIDO@NOMBRE@M@DNI@..."
-          const partes = decodedText.split("@");
-          const dni = partes.length >= 5 ? partes[4] : decodedText.replace(/\D/g, "");
-          setDniInput(dni);
-          setScanMode("manual");
-          scanner.stop().catch(() => {});
-        },
-        () => {}
-      ).catch(() => setScanMode("manual"));
+  if (scanMode !== "camara") return;
+  let scanner: any;
+  import("html5-qrcode").then(({ Html5Qrcode, Html5QrcodeSupportedFormats }) => {
+    scanner = new Html5Qrcode("dni-scanner", {
+      formatsToSupport: [
+        Html5QrcodeSupportedFormats.PDF_417,
+        Html5QrcodeSupportedFormats.QR_CODE,
+        Html5QrcodeSupportedFormats.DATA_MATRIX,
+      ],
+      verbose: false,
     });
-    return () => { if (scanner) scanner.stop().catch(() => {}); };
-  }, [scanMode]);
+    scanner.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: { width: 300, height: 100 } },
+      (decodedText: string) => {
+        const partes = decodedText.split("@");
+        const dni = partes.length >= 5 ? partes[4] : decodedText.replace(/\D/g, "");
+        setDniInput(dni);
+        setScanMode("manual");
+        scanner.stop().catch(() => {});
+      },
+      () => {}
+    ).catch(() => setScanMode("manual"));
+  });
+  return () => { if (scanner) scanner.stop().catch(() => {}); };
+}, [scanMode]);
   
 
   async function verificarDni() {
