@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 
 interface Envio {
@@ -21,7 +21,9 @@ export default function EntregaPage() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [scanMode, setScanMode] = useState<"manual" | "camara">("manual");
-  
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const scannerRef = useRef<any>(null);
+
   useEffect(() => {
     fetch(`/api/envios/${id}`).then(r => r.json()).then(data => {
       setEnvio(data);
@@ -29,35 +31,62 @@ export default function EntregaPage() {
     });
   }, [id]);
 
-  // Iniciar scanner de barcode/QR para DNI
   useEffect(() => {
-  if (scanMode !== "camara") return;
-  let scanner: any;
-  import("html5-qrcode").then(({ Html5Qrcode, Html5QrcodeSupportedFormats }) => {
-    scanner = new Html5Qrcode("dni-scanner", {
-      formatsToSupport: [
-        Html5QrcodeSupportedFormats.PDF_417,
-        Html5QrcodeSupportedFormats.QR_CODE,
-        Html5QrcodeSupportedFormats.DATA_MATRIX,
-      ],
-      verbose: false,
-    });
-    scanner.start(
-      { facingMode: "environment" },
-      { fps: 10, qrbox: { width: 300, height: 100 } },
-      (decodedText: string) => {
-        const partes = decodedText.split("@");
-        const dni = partes.length >= 5 ? partes[4] : decodedText.replace(/\D/g, "");
-        setDniInput(dni);
+    if (scanMode !== "camara") return;
+
+    let activo = true;
+
+    const iniciar = async () => {
+      const { BrowserMultiFormatReader } = await import("@zxing/browser");
+      const { BarcodeFormat, DecodeHintType } = await import("@zxing/library");
+
+      const hints = new Map();
+      hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+        BarcodeFormat.PDF_417,
+        BarcodeFormat.QR_CODE,
+        BarcodeFormat.DATA_MATRIX,
+      ]);
+      hints.set(DecodeHintType.TRY_HARDER, true);
+
+      const reader = new BrowserMultiFormatReader(hints);
+      scannerRef.current = reader;
+
+      if (!videoRef.current || !activo) return;
+
+      try {
+        await reader.decodeFromConstraints(
+          { video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } },
+          videoRef.current,
+          (result, err) => {
+            if (!result || !activo) return;
+            const texto = result.getText();
+            const partes = texto.split("@");
+            const dni = partes.length >= 5
+              ? partes[4].replace(/\D/g, "")
+              : texto.replace(/\D/g, "");
+            if (dni.length >= 7) {
+              setDniInput(dni);
+              setScanMode("manual");
+              activo = false;
+              reader.reset();
+            }
+          }
+        );
+      } catch {
         setScanMode("manual");
-        scanner.stop().catch(() => {});
-      },
-      () => {}
-    ).catch(() => setScanMode("manual"));
-  });
-  return () => { if (scanner) scanner.stop().catch(() => {}); };
-}, [scanMode]);
-  
+        setDniError("No se pudo acceder a la camara.");
+      }
+    };
+
+    iniciar();
+
+    return () => {
+      activo = false;
+      if (scannerRef.current) {
+        try { scannerRef.current.reset(); } catch {}
+      }
+    };
+  }, [scanMode]);
 
   async function verificarDni() {
     setLoading(true);
@@ -99,16 +128,12 @@ export default function EntregaPage() {
     window.open(`https://wa.me/${numero}`, "_blank");
   }
 
-  
-
   if (!envio) return <div className="text-center py-10 text-sm text-gray-400">Cargando...</div>;
-
 
   return (
     <div>
-      <button onClick={() => router.back()}
-        className="text-sm text-gray-400 mb-4 flex items-center gap-1">
-        ← Volver
+      <button onClick={() => router.back()} className="text-sm text-gray-400 mb-4 flex items-center gap-1">
+        &larr; Volver
       </button>
 
       <div className="flex items-center justify-between mb-4">
@@ -118,14 +143,12 @@ export default function EntregaPage() {
         </span>
       </div>
 
-      {/* Datos de entrega */}
       <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 mb-3">
         <p className="text-xs font-medium text-amber-700 mb-1">Direccion de entrega</p>
         <p className="font-semibold text-amber-900">{envio.entregaDireccion}</p>
         <p className="text-sm text-amber-700">{envio.entregaLocalidad}</p>
       </div>
 
-      {/* Datos del receptor */}
       <div className="bg-white rounded-xl border border-gray-100 p-4 mb-3">
         <p className="text-xs font-medium text-gray-500 mb-3">Datos del receptor</p>
         <div className="space-y-2">
@@ -149,12 +172,11 @@ export default function EntregaPage() {
         </div>
       </div>
 
-      {/* Verificacion DNI */}
       <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4">
         <p className="text-xs font-medium text-gray-500 mb-3">Verificar identidad del receptor</p>
         {dniOk ? (
           <div className="bg-green-50 rounded-lg px-3 py-2.5 text-sm text-green-700 font-medium flex items-center gap-2">
-            <span className="text-green-500">✓</span> DNI verificado correctamente
+            <span>✓</span> DNI verificado correctamente
           </div>
         ) : (
           <div className="space-y-2">
@@ -171,17 +193,25 @@ export default function EntregaPage() {
                 onClick={() => setScanMode(scanMode === "camara" ? "manual" : "camara")}
                 className="bg-gray-100 text-gray-700 text-xs px-3 py-2 rounded-lg hover:bg-gray-200 whitespace-nowrap"
               >
-                {scanMode === "camara" ? "Cancelar" : "Escanear"}
+                {scanMode === "camara" ? "Cancelar" : "Escanear DNI"}
               </button>
             </div>
+
             {scanMode === "camara" && (
               <div>
-                <div id="dni-scanner" className="w-full rounded-lg overflow-hidden" style={{ minHeight: 160 }} />
+                <video
+                  ref={videoRef}
+                  style={{ width:"100%", borderRadius:8, minHeight:200, background:"#000" }}
+                  autoPlay
+                  muted
+                  playsInline
+                />
                 <p className="text-xs text-gray-400 mt-1 text-center">
-                  Apunta al codigo de barras del DNI argentino
+                  Apunta al codigo de barras del dorso del DNI argentino
                 </p>
               </div>
             )}
+
             {dniError && (
               <p className="text-xs text-red-500 bg-red-50 px-3 py-2 rounded-lg">{dniError}</p>
             )}
