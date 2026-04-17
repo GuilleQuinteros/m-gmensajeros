@@ -68,7 +68,6 @@ export default function EntregaPage() {
               setDniInput(dni);
               setScanMode("manual");
               activo = false;
-              reader.reset();
             }
           }
         );
@@ -81,11 +80,11 @@ export default function EntregaPage() {
     iniciar();
 
     return () => {
-      activo = false;
-      if (scannerRef.current) {
-        try { scannerRef.current.reset(); } catch {}
-      }
-    };
+  activo = false;
+    if (scannerRef.current) {
+    try { scannerRef.current.stopContinuousDecode(); } catch {}
+    }
+  };
   }, [scanMode]);
 
   async function verificarDni() {
