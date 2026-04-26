@@ -88,18 +88,26 @@ export default function EntregaPage() {
   }, [scanMode]);
 
   async function verificarDni() {
-    setLoading(true);
+  setLoading(true);
+  setDniError("");
+  const res = await fetch(`/api/envios/${id}/verificar-dni`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ dniEscaneado: dniInput }),
+  });
+  const data = await res.json();
+  setLoading(false);
+  if (data.verificado) {
+    setDniOk(true);
     setDniError("");
-    const res = await fetch(`/api/envios/${id}/verificar-dni`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ dniEscaneado: dniInput }),
-    });
-    const data = await res.json();
-    setLoading(false);
-    if (data.verificado) { setDniOk(true); setDniError(""); }
-    else setDniError(data.error || "DNI no coincide.");
+    // Si fue escaneado (no manual), confirmar entrega automáticamente
+    if (scanMode === "manual" && dniInput.length > 6) {
+      await confirmar("entregado");
+    }
+  } else {
+    setDniError(data.error || "DNI no coincide.");
   }
+}
 
   async function confirmar(estado: "entregado" | "observacion") {
     if (estado === "entregado" && !dniOk) {
@@ -120,6 +128,12 @@ export default function EntregaPage() {
     else setMsg("Error al confirmar. Intenta de nuevo.");
   }
 
+  function simplificarZona(nombre: string): string {
+  // "CABA 24hs" → "CABA", "Provincia 96hs" → "Provincia"
+  return nombre.split(" ")[0];
+  }
+
+
   function abrirWhatsApp() {
     if (!envio) return;
     const tel = envio.compradorTelefono.replace(/\D/g, "");
@@ -138,7 +152,7 @@ export default function EntregaPage() {
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-base font-semibold">{envio.numeroEnvio}</h1>
         <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full font-medium">
-          {envio.zona.nombre}
+            {simplificarZona(envio.zona.nombre)}
         </span>
       </div>
 

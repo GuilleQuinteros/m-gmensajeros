@@ -124,6 +124,7 @@ model Envio {
   compradorApellido String @map("comprador_apellido")
   compradorDni      String @map("comprador_dni")
   compradorTelefono String @map("comprador_telefono")
+  compradorEmail    String?  @map("comprador_email")
 
   entregaDireccion String @map("entrega_direccion")
   entregaLocalidad String @map("entrega_localidad")

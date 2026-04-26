@@ -11,6 +11,7 @@ interface BulkRow {
   apellido: string;
   dni: string;
   telefono: string;
+  email?: string;
   direccion: string;
   localidad: string;
   zona: string;
@@ -59,6 +60,7 @@ export async function POST(req: NextRequest) {
           compradorApellido: row.apellido,
           compradorDni: row.dni,
           compradorTelefono: row.telefono,
+          compradorEmail: row.email || null,
           entregaDireccion: row.direccion,
           entregaLocalidad: row.localidad ?? "",
           observaciones: row.observaciones,

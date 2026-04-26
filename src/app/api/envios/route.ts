@@ -12,6 +12,7 @@ const createSchema = z.object({
   compradorApellido: z.string().min(1),
   compradorDni: z.string().min(7),
   compradorTelefono: z.string().min(8),
+  compradorEmail: z.string().email().optional().or(z.literal("")),
   entregaDireccion: z.string().min(1),
   entregaLocalidad: z.string().min(1),
   zonaId: z.string().min(1),
@@ -146,6 +147,7 @@ if (!parsed.success) {
       entregaDireccion: data.entregaDireccion,
       entregaLocalidad: data.entregaLocalidad,
       observaciones: data.observaciones,
+      compradorEmail: data.compradorEmail || null,
     },
     include: { zona: true },
   });

@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth";
 import { enviarAlerta } from "@/lib/whatsapp";
 import { z } from "zod";
 import type { EstadoEnvio } from "@prisma/client";
+import { enviarEmailEstado } from "@/lib/email";
 
 const schema = z.object({
   estado: z.enum([
@@ -13,10 +14,9 @@ const schema = z.object({
   nota: z.string().optional(),
 });
 
-const ALERTAS: Partial<Record<EstadoEnvio, any>> = {
+const EMAILS_EVENTOS: Partial<Record<EstadoEnvio, "deposito" | "camino">> = {
   en_deposito: "deposito",
-  en_camino:   "camino",
-  entregado:   "entregado",
+  en_camino: "camino",
 };
 
 export async function PATCH(
@@ -71,14 +71,14 @@ export async function PATCH(
     (process.env.META_WA_TOKEN && process.env.META_WA_PHONE_ID) ||
     process.env.CALLMEBOT_APIKEY;
 
-  const evento = ALERTAS[estado as EstadoEnvio];
-  if (evento && tieneWA) {
-    try {
-      await enviarAlerta(updated as any, evento);
-    } catch (err) {
-      console.error("[Alerta] Error al enviar, continuando:", err);
-    }
+  const eventoEmail = EMAILS_EVENTOS[estado as EstadoEnvio];
+if (eventoEmail) {
+  try {
+    await enviarEmailEstado(updated as any, eventoEmail);
+  } catch (err) {
+    console.error("[Email] Error, continuando:", err);
   }
+}
 
   return NextResponse.json(updated);
 }

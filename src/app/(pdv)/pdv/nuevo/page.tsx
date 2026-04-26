@@ -11,7 +11,7 @@ export default function NuevoEnvioPage() {
   const [error, setError] = useState("");
   const [form, setForm] = useState({
     compradorNombre: "", compradorApellido: "", compradorDni: "",
-    compradorTelefono: "", entregaDireccion: "", entregaLocalidad: "",
+    compradorTelefono: "", compradorEmail: "", entregaDireccion: "", entregaLocalidad: "",
     zonaId: "", observaciones: "",
   });
 
@@ -91,6 +91,17 @@ export default function NuevoEnvioPage() {
                 value={form.compradorTelefono}
                 onChange={e => set("compradorTelefono", e.target.value)}
                 placeholder="11 XXXX-XXXX"
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-400"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Email del comprador</label>
+              <input
+                type="email"
+                inputMode="email"
+                value={form.compradorEmail}
+                onChange={e => set("compradorEmail", e.target.value)}
+                placeholder="comprador@email.com"
                 className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
             </div>
