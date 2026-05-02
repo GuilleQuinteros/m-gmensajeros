@@ -186,3 +186,15 @@ model PlantillaAlerta {
   @@unique([evento, canal])
   @@map("plantillas_alertas")
 }
+
+model ApiKey {
+  id          String   @id @default(uuid())
+  nombre      String
+  keyHash     String   @unique @map("key_hash")
+  clienteId   String?  @map("cliente_id")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  lastUsedAt  DateTime? @map("last_used_at")
+
+  @@map("api_keys")
+}

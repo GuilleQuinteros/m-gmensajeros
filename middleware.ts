@@ -5,12 +5,13 @@ import type { NextRequest } from "next/server";
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Rutas publicas — pasan sin auth
   if (
     pathname.startsWith("/t/") ||
     pathname.startsWith("/auth") ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/api/tracking") ||
+    pathname.startsWith("/api/v1") ||
+    pathname.startsWith("/seguimiento") ||
     pathname === "/"
   ) {
     return NextResponse.next();
