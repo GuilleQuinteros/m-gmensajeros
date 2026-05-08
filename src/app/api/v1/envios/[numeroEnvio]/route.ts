@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiKey } from "@/lib/apiAuth";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,10 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { numeroEnvio: string } }
 ) {
+
+  const limited = await checkRateLimit(req, "api");
+  if (limited) return limited;
+
   const { error } = await requireApiKey(req);
   if (error) return error;
 

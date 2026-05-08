@@ -35,29 +35,32 @@ export async function checkRateLimit(
   req: NextRequest,
   type: "api" | "auth" | "tracking"
 ): Promise<NextResponse | null> {
-  // Si no hay Redis configurado, saltar silenciosamente
-  if (!process.env.UPSTASH_REDIS_REST_URL) return null;
+  if (!process.env.UPSTASH_REDIS_REST_URL) {
+    console.log("[RateLimit] Sin Redis configurado, saltando.");
+    return null;
+  }
 
   const limiter = type === "api" ? apiLimiter : type === "auth" ? authLimiter : trackingLimiter;
   const ip = getIP(req);
-  const { success, limit, remaining, reset } = await limiter.limit(ip);
-
-  if (!success) {
-    return NextResponse.json(
-      {
-        error: "Demasiadas solicitudes. Intenta en unos minutos.",
-        retryAfter: Math.ceil((reset - Date.now()) / 1000),
-      },
-      {
-        status: 429,
-        headers: {
-          "X-RateLimit-Limit": String(limit),
-          "X-RateLimit-Remaining": "0",
-          "X-RateLimit-Reset": String(reset),
-          "Retry-After": String(Math.ceil((reset - Date.now()) / 1000)),
+  
+  
+  
+  try {
+    const { success, limit, remaining, reset } = await limiter.limit(ip);
+    // console.log("[RateLimit] success:", success, "remaining:", remaining, "limit:", limit);
+    
+    if (!success) {
+      return NextResponse.json(
+        {
+          error: "Demasiadas solicitudes. Intenta en unos minutos.",
+          retryAfter: Math.ceil((reset - Date.now()) / 1000),
         },
-      }
-    );
+        { status: 429 }
+      );
+    }
+  } catch (err) {
+    console.error("[RateLimit] Error:", err);
+    return null;
   }
 
   return null;

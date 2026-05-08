@@ -4,6 +4,7 @@ import { requireApiKey } from "@/lib/apiAuth";
 import { generarNumeroEnvio } from "@/lib/numeroEnvio";
 import { enviarEmailEstado } from "@/lib/email";
 import { z } from "zod";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,12 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  
+
+  const limited = await checkRateLimit(req, "api");
+  
+  if (limited) return limited;
+
   const { error, clienteId } = await requireApiKey(req);
   if (error) return error;
 
