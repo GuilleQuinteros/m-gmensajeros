@@ -15,10 +15,15 @@ const schema = z.object({
   telefono: z.string().min(8),
   email: z.string().email().optional(),
   direccion: z.string().min(1),
+  piso: z.string().optional(),
   localidad: z.string().min(1),
+  partido: z.string().optional(),
+  provincia: z.string().optional(),
+  codigoPostal: z.string().optional(),
+  entreCalles: z.string().optional(),
   zonaId: z.string().min(1),
   observaciones: z.string().optional(),
-  pedidoExterno: z.string().optional(), // ID del pedido en E3 u otro sistema
+  pedidoExterno: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -98,6 +103,11 @@ export async function POST(req: NextRequest) {
       compradorEmail: data.email ?? null,
       entregaDireccion: data.direccion,
       entregaLocalidad: data.localidad,
+      entregaPiso: data.piso ?? null,
+      entregaPartido: data.partido ?? null,
+      entregaProvincia: data.provincia ?? null,
+      entregaCodigoPostal: data.codigoPostal ?? null,
+      entregaEntreCalles: data.entreCalles ?? null,
       observaciones: data.observaciones ?? null,
     },
     include: { zona: true },

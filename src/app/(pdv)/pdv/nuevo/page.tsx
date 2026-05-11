@@ -11,9 +11,12 @@ export default function NuevoEnvioPage() {
   const [error, setError] = useState("");
   const [form, setForm] = useState({
     compradorNombre: "", compradorApellido: "", compradorDni: "",
-    compradorTelefono: "", compradorEmail: "", entregaDireccion: "", entregaLocalidad: "",
-    zonaId: "", observaciones: "",
-  });
+  compradorTelefono: "", compradorEmail: "",
+  entregaDireccion: "", entregaPiso: "", entregaLocalidad: "",
+  entregaPartido: "", entregaProvincia: "",
+  entregaCodigoPostal: "", entregaEntreCalles: "",
+  zonaId: "", observaciones: "",
+});
 
   useEffect(() => {
     fetch("/api/zonas").then(r => r.json()).then(setZonas);
@@ -117,7 +120,58 @@ export default function NuevoEnvioPage() {
               className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-400"
             />
           </div>
+            <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Piso / Dpto</label>
+              <input
+                value={form.entregaPiso}
+                onChange={e => set("entregaPiso", e.target.value)}
+                placeholder="Ej: 3 B"
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-400"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Codigo postal</label>
+              <input
+                inputMode="numeric"
+                value={form.entregaCodigoPostal}
+                onChange={e => set("entregaCodigoPostal", e.target.value)}
+                placeholder="Ej: 1414"
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-400"
+              />
+            </div>
+          </div>
 
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Entre calles</label>
+            <input
+              value={form.entregaEntreCalles}
+              onChange={e => set("entregaEntreCalles", e.target.value)}
+              placeholder="Ej: Corrientes y Callao"
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-400"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Partido</label>
+              <input
+                value={form.entregaPartido}
+                onChange={e => set("entregaPartido", e.target.value)}
+                placeholder="Ej: La Matanza"
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-400"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Provincia</label>
+              <input
+                value={form.entregaProvincia}
+                onChange={e => set("entregaProvincia", e.target.value)}
+                placeholder="Ej: Buenos Aires"
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-400"
+              />
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-gray-500 mb-1">Localidad *</label>

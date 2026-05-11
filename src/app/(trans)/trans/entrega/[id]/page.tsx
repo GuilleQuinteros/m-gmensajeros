@@ -7,8 +7,17 @@ interface Envio {
   compradorNombre: string; compradorApellido: string;
   compradorTelefono: string;
   entregaDireccion: string; entregaLocalidad: string;
+  entregaPiso?: string | null;
+  entregaEntreCalles?: string | null;
+  entregaPartido?: string | null;
+  entregaProvincia?: string | null;
+  entregaCodigoPostal?: string | null;
   estado: string; dniVerificadoAt: string | null;
   zona: { nombre: string; slaHoras: number };
+}
+
+function simplificarZona(nombre: string): string {
+  return nombre.split(" ")[0];
 }
 
 export default function EntregaPage() {
@@ -21,6 +30,7 @@ export default function EntregaPage() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [scanMode, setScanMode] = useState<"manual" | "camara">("manual");
+  const [cambiandoEstado, setCambiandoEstado] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const scannerRef = useRef<any>(null);
 
@@ -33,13 +43,10 @@ export default function EntregaPage() {
 
   useEffect(() => {
     if (scanMode !== "camara") return;
-
     let activo = true;
-
     const iniciar = async () => {
       const { BrowserMultiFormatReader } = await import("@zxing/browser");
       const { BarcodeFormat, DecodeHintType } = await import("@zxing/library");
-
       const hints = new Map();
       hints.set(DecodeHintType.POSSIBLE_FORMATS, [
         BarcodeFormat.PDF_417,
@@ -47,17 +54,14 @@ export default function EntregaPage() {
         BarcodeFormat.DATA_MATRIX,
       ]);
       hints.set(DecodeHintType.TRY_HARDER, true);
-
       const reader = new BrowserMultiFormatReader(hints);
       scannerRef.current = reader;
-
       if (!videoRef.current || !activo) return;
-
       try {
         await reader.decodeFromConstraints(
           { video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } },
           videoRef.current,
-          (result, err) => {
+          (result) => {
             if (!result || !activo) return;
             const texto = result.getText();
             const partes = texto.split("@");
@@ -76,38 +80,50 @@ export default function EntregaPage() {
         setDniError("No se pudo acceder a la camara.");
       }
     };
-
     iniciar();
-
     return () => {
-  activo = false;
-    if (scannerRef.current) {
-    try { scannerRef.current.stopContinuousDecode(); } catch {}
-    }
-  };
+      activo = false;
+      if (scannerRef.current) {
+        try { scannerRef.current.stopContinuousDecode(); } catch {}
+      }
+    };
   }, [scanMode]);
 
-  async function verificarDni() {
-  setLoading(true);
-  setDniError("");
-  const res = await fetch(`/api/envios/${id}/verificar-dni`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ dniEscaneado: dniInput }),
-  });
-  const data = await res.json();
-  setLoading(false);
-  if (data.verificado) {
-    setDniOk(true);
-    setDniError("");
-    // Si fue escaneado (no manual), confirmar entrega automáticamente
-    if (scanMode === "manual" && dniInput.length > 6) {
-      await confirmar("entregado");
+  async function marcarEnCamino() {
+    setCambiandoEstado(true);
+    const res = await fetch(`/api/envios/${id}/estado`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        estado: "en_camino",
+        nota: "Transportista salio a entregar",
+      }),
+    });
+    if (res.ok) {
+      const updated = await fetch(`/api/envios/${id}`).then(r => r.json());
+      setEnvio(updated);
     }
-  } else {
-    setDniError(data.error || "DNI no coincide.");
+    setCambiandoEstado(false);
   }
-}
+
+  async function verificarDni() {
+    setLoading(true);
+    setDniError("");
+    const res = await fetch(`/api/envios/${id}/verificar-dni`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dniEscaneado: dniInput }),
+    });
+    const data = await res.json();
+    setLoading(false);
+    if (data.verificado) {
+      setDniOk(true);
+      setDniError("");
+      await confirmar("entregado");
+    } else {
+      setDniError(data.error || "DNI no coincide.");
+    }
+  }
 
   async function confirmar(estado: "entregado" | "observacion") {
     if (estado === "entregado" && !dniOk) {
@@ -120,19 +136,15 @@ export default function EntregaPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         estado,
-        nota: estado === "observacion" ? "Sin respuesta / ausente" : "Entrega confirmada con DNI verificado",
+        nota: estado === "observacion"
+          ? "Sin respuesta / ausente"
+          : "Entrega confirmada con DNI verificado",
       }),
     });
     setLoading(false);
     if (res.ok) router.push("/trans/mis-envios");
     else setMsg("Error al confirmar. Intenta de nuevo.");
   }
-
-  function simplificarZona(nombre: string): string {
-  // "CABA 24hs" → "CABA", "Provincia 96hs" → "Provincia"
-  return nombre.split(" ")[0];
-  }
-
 
   function abrirWhatsApp() {
     if (!envio) return;
@@ -141,33 +153,75 @@ export default function EntregaPage() {
     window.open(`https://wa.me/${numero}`, "_blank");
   }
 
-  if (!envio) return <div className="text-center py-10 text-sm text-gray-400">Cargando...</div>;
+  if (!envio) return (
+    <div className="text-center py-10 text-sm text-gray-400">Cargando...</div>
+  );
+
+  const estaEnDeposito = envio.estado === "en_deposito";
+  const estaEnCamino = envio.estado === "en_camino";
 
   return (
     <div>
-      <button onClick={() => router.back()} className="text-sm text-gray-400 mb-4 flex items-center gap-1">
+      <button onClick={() => router.back()}
+        className="text-sm text-gray-400 mb-4 flex items-center gap-1">
         &larr; Volver
       </button>
 
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-base font-semibold">{envio.numeroEnvio}</h1>
         <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full font-medium">
-            {simplificarZona(envio.zona.nombre)}
+          {simplificarZona(envio.zona.nombre)}
         </span>
       </div>
 
+      {/* Alerta si esta en deposito — debe marcar en camino primero */}
+      {estaEnDeposito && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+          <p className="text-sm font-medium text-amber-800 mb-1">
+            Este envio esta en deposito
+          </p>
+          <p className="text-xs text-amber-600 mb-3">
+            Debes confirmar que saliste a entregar antes de registrar la entrega.
+            Esto notifica al comprador que su pedido esta en camino.
+          </p>
+          <button
+            onClick={marcarEnCamino}
+            disabled={cambiandoEstado}
+            className="w-full bg-amber-700 text-white text-sm py-2.5 rounded-lg hover:bg-amber-800 disabled:opacity-50 font-medium"
+          >
+            {cambiandoEstado ? "Actualizando..." : "Confirmar salida a entregar"}
+          </button>
+        </div>
+      )}
+
+      {/* Direccion de entrega */}
       <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 mb-3">
         <p className="text-xs font-medium text-amber-700 mb-1">Direccion de entrega</p>
         <p className="font-semibold text-amber-900">{envio.entregaDireccion}</p>
-        <p className="text-sm text-amber-700">{envio.entregaLocalidad}</p>
+        {envio.entregaPiso && (
+          <p className="text-sm text-amber-800">Piso/Dpto: {envio.entregaPiso}</p>
+        )}
+        <p className="text-sm text-amber-700">{envio.entregaLocalidad}
+          {envio.entregaPartido ? `, ${envio.entregaPartido}` : ""}
+          {envio.entregaProvincia ? ` — ${envio.entregaProvincia}` : ""}
+        </p>
+        {envio.entregaCodigoPostal && (
+          <p className="text-xs text-amber-600">CP: {envio.entregaCodigoPostal}</p>
+        )}
+        {envio.entregaEntreCalles && (
+          <p className="text-xs text-amber-600">Entre: {envio.entregaEntreCalles}</p>
+        )}
       </div>
 
+      {/* Datos del receptor */}
       <div className="bg-white rounded-xl border border-gray-100 p-4 mb-3">
         <p className="text-xs font-medium text-gray-500 mb-3">Datos del receptor</p>
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-gray-500">Nombre</span>
-            <span className="font-medium">{envio.compradorNombre} {envio.compradorApellido}</span>
+            <span className="font-medium">
+              {envio.compradorNombre} {envio.compradorApellido}
+            </span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-500">Telefono</span>
@@ -185,71 +239,88 @@ export default function EntregaPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4">
-        <p className="text-xs font-medium text-gray-500 mb-3">Verificar identidad del receptor</p>
-        {dniOk ? (
-          <div className="bg-green-50 rounded-lg px-3 py-2.5 text-sm text-green-700 font-medium flex items-center gap-2">
-            <span>✓</span> DNI verificado correctamente
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                inputMode="numeric"
-                value={dniInput}
-                onChange={e => setDniInput(e.target.value)}
-                placeholder="Numero de DNI"
-                className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-400"
-              />
+      {/* Verificacion DNI — solo si esta en camino */}
+      {estaEnCamino && (
+        <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4">
+          <p className="text-xs font-medium text-gray-500 mb-3">
+            Verificar identidad del receptor
+          </p>
+          {dniOk ? (
+            <div className="bg-green-50 rounded-lg px-3 py-2.5 text-sm text-green-700 font-medium flex items-center gap-2">
+              <span>✓</span> DNI verificado — confirmando entrega...
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={dniInput}
+                  onChange={e => setDniInput(e.target.value)}
+                  placeholder="Numero de DNI"
+                  className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+                <button
+                  onClick={() => setScanMode(scanMode === "camara" ? "manual" : "camara")}
+                  className="bg-gray-100 text-gray-700 text-xs px-3 py-2 rounded-lg hover:bg-gray-200 whitespace-nowrap"
+                >
+                  {scanMode === "camara" ? "Cancelar" : "Escanear DNI"}
+                </button>
+              </div>
+
+              {scanMode === "camara" && (
+                <div>
+                  <video
+                    ref={videoRef}
+                    style={{ width:"100%", borderRadius:8, minHeight:200, background:"#000" }}
+                    autoPlay muted playsInline
+                  />
+                  <p className="text-xs text-gray-400 mt-1 text-center">
+                    Apunta al codigo de barras del dorso del DNI argentino
+                  </p>
+                </div>
+              )}
+
+              {dniError && (
+                <p className="text-xs text-red-500 bg-red-50 px-3 py-2 rounded-lg">
+                  {dniError}
+                </p>
+              )}
               <button
-                onClick={() => setScanMode(scanMode === "camara" ? "manual" : "camara")}
-                className="bg-gray-100 text-gray-700 text-xs px-3 py-2 rounded-lg hover:bg-gray-200 whitespace-nowrap"
+                onClick={verificarDni}
+                disabled={loading || !dniInput}
+                className="w-full bg-gray-800 text-white text-sm py-2.5 rounded-lg hover:bg-gray-900 disabled:opacity-50"
               >
-                {scanMode === "camara" ? "Cancelar" : "Escanear DNI"}
+                {loading ? "Verificando..." : "Verificar DNI y confirmar entrega"}
               </button>
             </div>
-
-            {scanMode === "camara" && (
-              <div>
-                <video
-                  ref={videoRef}
-                  style={{ width:"100%", borderRadius:8, minHeight:200, background:"#000" }}
-                  autoPlay
-                  muted
-                  playsInline
-                />
-                <p className="text-xs text-gray-400 mt-1 text-center">
-                  Apunta al codigo de barras del dorso del DNI argentino
-                </p>
-              </div>
-            )}
-
-            {dniError && (
-              <p className="text-xs text-red-500 bg-red-50 px-3 py-2 rounded-lg">{dniError}</p>
-            )}
-            <button onClick={verificarDni} disabled={loading || !dniInput}
-              className="w-full bg-gray-800 text-white text-sm py-2.5 rounded-lg hover:bg-gray-900 disabled:opacity-50">
-              {loading ? "Verificando..." : "Verificar DNI"}
-            </button>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {msg && (
         <p className="text-xs text-red-500 bg-red-50 px-3 py-2 rounded-lg mb-3">{msg}</p>
       )}
 
-      <div className="space-y-3">
-        <button onClick={() => confirmar("entregado")} disabled={loading || !dniOk}
-          className="w-full bg-green-700 text-white font-medium py-3 rounded-xl hover:bg-green-800 disabled:opacity-50 text-sm">
-          {loading ? "Confirmando..." : "Confirmar entrega"}
-        </button>
-        <button onClick={() => confirmar("observacion")} disabled={loading}
-          className="w-full border border-gray-200 text-gray-600 py-3 rounded-xl hover:bg-gray-50 disabled:opacity-50 text-sm">
-          Sin respuesta / Ausente
-        </button>
-      </div>
+      {/* Botones de accion — solo si esta en camino */}
+      {estaEnCamino && (
+        <div className="space-y-3">
+          <button
+            onClick={() => confirmar("entregado")}
+            disabled={loading || !dniOk}
+            className="w-full bg-green-700 text-white font-medium py-3 rounded-xl hover:bg-green-800 disabled:opacity-50 text-sm"
+          >
+            {loading ? "Confirmando..." : "Confirmar entrega"}
+          </button>
+          <button
+            onClick={() => confirmar("observacion")}
+            disabled={loading}
+            className="w-full border border-gray-200 text-gray-600 py-3 rounded-xl hover:bg-gray-50 disabled:opacity-50 text-sm"
+          >
+            Sin respuesta / Ausente
+          </button>
+        </div>
+      )}
     </div>
   );
 }

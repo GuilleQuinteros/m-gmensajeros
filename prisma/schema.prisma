@@ -128,6 +128,11 @@ model Envio {
 
   entregaDireccion String @map("entrega_direccion")
   entregaLocalidad String @map("entrega_localidad")
+  entregaPiso         String? @map("entrega_piso")
+  entregaCodigoPostal String? @map("entrega_codigo_postal")
+  entregaEntreCalles  String? @map("entrega_entre_calles")
+  entregaProvincia    String? @map("entrega_provincia")
+  entregaPartido      String? @map("entrega_partido")
 
   trackingToken String @unique @default(uuid()) @map("tracking_token")
 
