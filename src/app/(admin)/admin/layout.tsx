@@ -16,7 +16,9 @@ export default async function AdminLayout({
   return (
     <div className="flex h-screen overflow-hidden">
       <AdminSidebar userName={session.user?.name ?? ""} />
-      <main className="flex-1 overflow-auto bg-gray-50 p-6">{children}</main>
+      <main className="flex-1 overflow-auto bg-gray-50 p-6 pt-20 md:pt-6">
+        {children}
+      </main>
     </div>
   );
 }
