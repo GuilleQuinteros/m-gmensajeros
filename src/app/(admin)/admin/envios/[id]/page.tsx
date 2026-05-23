@@ -38,6 +38,11 @@ interface Envio {
   transportista: { id: string; fullName: string } | null;
   historial: { id: string; estadoNuevo: string; createdAt: string; nota: string | null; user: { fullName: string } }[];
   alertasEnviadas: { id: string; tipo: string; canal: string; mensaje: string; estadoEnvio: string; sentAt: string | null }[];
+  entregaPiso: string | null;
+  entregaEntreCalles: string | null;
+  entregaPartido: string | null;
+  entregaProvincia: string | null;
+  entregaCodigoPostal: string | null;
 }
 
 export default function EnvioDetallePage() {
@@ -168,6 +173,11 @@ export default function EnvioDetallePage() {
               ["Direccion", envio.entregaDireccion],
               ["Localidad", envio.entregaLocalidad],
               ["Zona", envio.zona ? `${envio.zona.nombre} (${envio.zona.slaHoras}hs)` : "Sin zona"],
+              ["Piso/Dpto", envio.entregaPiso ?? "—"],
+              ["Entre calles", envio.entregaEntreCalles ?? "—"],
+              ["Partido", envio.entregaPartido ?? "—"],
+              ["Provincia", envio.entregaProvincia ?? "—"],
+              ["Codigo postal", envio.entregaCodigoPostal ?? "—"],
               ["Costo envio", `$${Number(envio.costoEnvio).toLocaleString("es-AR")}`],
               ["PDV origen", envio.pdv.nombre],
               ["Transportista", envio.transportista?.fullName ?? "Sin asignar"],

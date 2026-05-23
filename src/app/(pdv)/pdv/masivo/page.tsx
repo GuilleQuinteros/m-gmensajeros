@@ -100,7 +100,7 @@ export default function MasivoPage() {
         </code>
 
         <p className="text-xs text-gray-400 mb-4">
-          En <strong>zona</strong> escribi el nombre exacto de la zona tal como aparece en el sistema.
+          La columna <strong>zona</strong> es opcional si el archivo incluye <strong>partido</strong>, <strong>provincia</strong> o <strong>codigo_postal</strong> — el sistema detecta la zona automaticamente.
         </p>
 
         <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center mb-4">

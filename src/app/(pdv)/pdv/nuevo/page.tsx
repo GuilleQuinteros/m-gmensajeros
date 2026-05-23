@@ -185,18 +185,27 @@ export default function NuevoEnvioPage() {
             <div>
               <label className="block text-xs text-gray-500 mb-1">Zona *</label>
               <select
-                required
                 value={form.zonaId}
                 onChange={e => set("zonaId", e.target.value)}
                 className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
               >
                 <option value="">Seleccionar...</option>
+                {!form.zonaId && (form.entregaPartido || form.entregaProvincia || form.entregaCodigoPostal) && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      La zona se detectara automaticamente por partido/provincia/CP
+                    </p>
+                  )}
                 {zonas.map(z => (
                   <option key={z.id} value={z.id}>
                     {z.nombre} ({z.slaHoras}hs) - ${z.costo.toLocaleString("es-AR")}
                   </option>
                 ))}
               </select>
+              {!form.zonaId && (form.entregaPartido || form.entregaProvincia || form.entregaCodigoPostal) && (
+                <p className="text-xs text-amber-600 mt-1">
+                  La zona se detectara automaticamente por partido/provincia/CP
+                </p>
+              )}
             </div>
           </div>
 
