@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiKey } from "@/lib/apiAuth";
 import { generarNumeroEnvio } from "@/lib/numeroEnvio";
-import { enviarEmailEstado } from "@/lib/email";
-import { z } from "zod";
+import { detectarZonaId } from "@/lib/detectarZona";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { z } from "zod";
 
 export const dynamic = "force-dynamic";
 
@@ -21,16 +21,13 @@ const schema = z.object({
   provincia: z.string().optional(),
   codigoPostal: z.string().optional(),
   entreCalles: z.string().optional(),
-  zonaId: z.string().min(1),
+  zonaId: z.string().optional(), // opcional — se detecta automáticamente
   observaciones: z.string().optional(),
   pedidoExterno: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
-  
-
   const limited = await checkRateLimit(req, "api");
-  
   if (limited) return limited;
 
   const { error, clienteId } = await requireApiKey(req);
@@ -41,17 +38,14 @@ export async function POST(req: NextRequest) {
 
   if (!parsed.success) {
     return NextResponse.json(
-      {
-        error: "Datos invalidos",
-        detalle: parsed.error.flatten().fieldErrors,
-      },
+      { error: "Datos invalidos", detalle: parsed.error.flatten().fieldErrors },
       { status: 400 }
     );
   }
 
   const data = parsed.data;
 
-  // Buscar PDV asociado a la API key
+  // PDV asociado a la API key
   const pdv = clienteId
     ? await prisma.puntoDeVenta.findUnique({
         where: { id: clienteId },
@@ -69,19 +63,35 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Validar zona
-  const zona = await prisma.zona.findUnique({
-    where: { id: data.zonaId },
-  });
+  // Resolver zona — por zonaId explícito o detección automática
+  let zona = null;
+
+  if (data.zonaId) {
+    zona = await prisma.zona.findUnique({ where: { id: data.zonaId } });
+  }
+
+  if (!zona) {
+    const zonaIdDetectado = await detectarZonaId(
+      data.partido,
+      data.provincia,
+      data.codigoPostal
+    );
+    if (zonaIdDetectado) {
+      zona = await prisma.zona.findUnique({ where: { id: zonaIdDetectado } });
+    }
+  }
 
   if (!zona || !zona.isActive) {
     return NextResponse.json(
-      { error: `Zona "${data.zonaId}" no encontrada o inactiva.` },
-      { status: 404 }
+      {
+        error: "No se pudo determinar la zona de envio.",
+        sugerencia: "Envia 'zonaId' con un ID valido, o incluye 'partido', 'provincia' o 'codigoPostal' para deteccion automatica.",
+      },
+      { status: 400 }
     );
   }
 
-  // Buscar transportista automático para la zona
+  // Transportista automático
   const asignacion = await prisma.zonaTransportista.findFirst({
     where: { zonaId: zona.id, isActive: true },
     select: { transportistaId: true },
@@ -113,7 +123,6 @@ export async function POST(req: NextRequest) {
     include: { zona: true },
   });
 
-  // Historial
   await prisma.envioHistorial.create({
     data: {
       envioId: envio.id,
@@ -136,6 +145,7 @@ export async function POST(req: NextRequest) {
         id: zona.id,
         nombre: zona.nombre,
         slaHoras: zona.slaHoras,
+        detectadaAutomaticamente: !data.zonaId,
       },
       costoEnvio: Number(zona.costo),
       pdv: pdv.nombre,
