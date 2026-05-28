@@ -1,6 +1,10 @@
 # M&G Mensajeros — API de Integración v1
 
-Base URL: `https://www.mgmensajeros.com.ar`
+Base URL: `https://mgmensajeros.com.ar`
+
+> Usar siempre sin www para llamadas a la API.
+> El dominio www.mgmensajeros.com.ar redirige al navegador pero
+> puede no preservar headers en clientes HTTP.
 
 ## Autenticación
 
@@ -18,7 +22,7 @@ Obtiene las zonas de envío disponibles con sus costos y tiempos.
 
 **Request:**
 ```
-GET https://www.mgmensajeros.com.ar/api/v1/zonas
+GET https://mgmensajeros.com.ar/api/v1/zonas
 Authorization: Bearer mgm_TU_API_KEY
 ```
 
@@ -58,7 +62,7 @@ Registra un nuevo envío. El comprador recibirá un email con el número de segu
 
 **Request:**
 ```
-POST https://www.mgmensajeros.com.ar/api/v1/envios
+POST https://mgmensajeros.com.ar/api/v1/envios
 Authorization: Bearer mgm_TU_API_KEY
 Content-Type: application/json
 ```
@@ -114,7 +118,7 @@ Consulta el estado actual de un envío.
 
 **Request:**
 ```
-GET https://www.mgmensajeros.com.ar/api/v1/envios/ENV-0042
+GET https://mgmensajeros.com.ar/api/v1/envios/ENV-0042
 Authorization: Bearer mgm_TU_API_KEY
 ```
 
@@ -184,7 +188,7 @@ Ingresando el número de envío formato `ENV-0042`.
 ## Ejemplo de integración en JavaScript
 
 ```javascript
-const API_BASE = "https://www.mgmensajeros.com.ar";
+const API_BASE = "https://mgmensajeros.com.ar";
 const API_KEY = "mgm_TU_API_KEY";
 
 // 1. Obtener zonas para mostrar selector en el checkout

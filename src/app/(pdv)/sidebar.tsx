@@ -6,6 +6,7 @@ import { signOut } from "next-auth/react";
 const NAV = [
   { href: "/pdv/mis-envios",  label: "Mis envios" },
   { href: "/pdv/nuevo",       label: "Cargar" },
+  { href: "/pdv/ocr",         label: "Escanear" },  // ← agregar
   { href: "/pdv/qr",          label: "Leer QR" },
   { href: "/pdv/masivo",      label: "Masivo" },
 ];
