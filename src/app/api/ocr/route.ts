@@ -14,16 +14,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Imagen requerida" }, { status: 400 });
   }
 
-  // Remover el prefijo data:image/...;base64,
+  // Detectar tipo de imagen
+  const mediaTypeMatch = imagen.match(/^data:(image\/[a-z]+);base64,/);
+  const mediaType = mediaTypeMatch ? mediaTypeMatch[1] : "image/jpeg";
   const base64 = imagen.replace(/^data:image\/[a-z]+;base64,/, "");
 
   try {
-    const datos = await extraerDatosComprobante(base64);
+    const datos = await extraerDatosComprobante(base64, mediaType);
     return NextResponse.json({ ok: true, datos });
-  } catch (err) {
-    console.error("[OCR] Error:", err);
+  } catch (err: any) {
+    console.error("[OCR] Error:", err?.message ?? err);
     return NextResponse.json(
-      { error: "Error al procesar la imagen. Intentá con mejor iluminación." },
+      { error: "Error al procesar la imagen. Intenta de nuevo." },
       { status: 500 }
     );
   }
