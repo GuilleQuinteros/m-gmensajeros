@@ -7,11 +7,11 @@ import type { EstadoEnvio } from "@prisma/client";
 import { enviarEmailEstado } from "@/lib/email";
 
 const schema = z.object({
-  estado: z.enum([
-    "a_retirar", "en_deposito", "en_camino",
-    "entregado", "observacion", "cancelado",
-  ]),
+  estado: z.enum(["a_retirar","en_deposito","en_camino","entregado","observacion","cancelado"]),
   nota: z.string().optional(),
+  receptorNombre: z.string().optional(),
+  receptorDni: z.string().optional(),
+  receptorHora: z.string().optional(),
 });
 
 const EMAILS_EVENTOS: Partial<Record<EstadoEnvio, "deposito" | "camino">> = {
@@ -32,7 +32,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Datos invalidos" }, { status: 400 });
   }
 
-  const { estado, nota } = parsed.data;
+  const { estado, nota, receptorNombre, receptorDni, receptorHora } = parsed.data;
   const role = (session!.user as any).role;
 
   if (role === "transportista" && estado === "cancelado") {
@@ -47,14 +47,18 @@ export async function PATCH(
     return NextResponse.json({ error: "Envio no encontrado" }, { status: 404 });
   }
 
-  const updated = await prisma.envio.update({
-    where: { id: params.id },
-    data: {
-      estado,
-      ...(estado === "entregado" ? { entregadoAt: new Date() } : {}),
-    },
-    include: { zona: true },
-  });
+  // En el update de Prisma agregá:
+const updated = await prisma.envio.update({
+  where: { id: params.id },
+  data: {
+    estado,
+    ...(estado === "entregado" ? { entregadoAt: new Date() } : {}),
+    ...(parsed.data.receptorNombre ? { receptorNombre: parsed.data.receptorNombre } : {}),
+    ...(parsed.data.receptorDni ? { receptorDni: parsed.data.receptorDni } : {}),
+    ...(parsed.data.receptorHora ? { receptorHora: parsed.data.receptorHora } : {}),
+  },
+  include: { zona: true },
+});
 
   await prisma.envioHistorial.create({
     data: {

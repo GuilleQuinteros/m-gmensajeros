@@ -27,6 +27,9 @@ const ESTADO_COLOR: Record<string, string> = {
 
 interface Transportista { id: string; fullName: string; }
 interface Envio {
+  receptorHora: string;
+  receptorNombre: string;
+  receptorDni: string;
   id: string; numeroEnvio: string; estado: string;
   compradorNombre: string; compradorApellido: string;
   compradorDni: string; compradorTelefono: string;
@@ -181,6 +184,9 @@ export default function EnvioDetallePage() {
               ["Costo envio", `$${Number(envio.costoEnvio).toLocaleString("es-AR")}`],
               ["PDV origen", envio.pdv.nombre],
               ["Transportista", envio.transportista?.fullName ?? "Sin asignar"],
+              ["Receptor", envio.receptorNombre ?? "—"],
+              ["DNI del receptor", envio.receptorDni ?? "—"],
+              ["Hora de recepción", envio.receptorHora ?? "—"],
               ["Link tracking", `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/t/${envio.trackingToken}`],
             ].map(([k, v]) => (
               <div key={k} className="flex gap-2">

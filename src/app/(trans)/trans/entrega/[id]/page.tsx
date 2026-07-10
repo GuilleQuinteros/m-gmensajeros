@@ -33,6 +33,10 @@ export default function EntregaPage() {
   const [cambiandoEstado, setCambiandoEstado] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const scannerRef = useRef<any>(null);
+  const [otraPersona, setOtraPersona] = useState(false);
+  const [receptorNombre, setReceptorNombre] = useState("");
+  const [receptorDni, setReceptorDni] = useState("");
+  const [receptorHora, setReceptorHora] = useState("");
 
   useEffect(() => {
     fetch(`/api/envios/${id}`).then(r => r.json()).then(data => {
@@ -126,25 +130,37 @@ export default function EntregaPage() {
   }
 
   async function confirmar(estado: "entregado" | "observacion") {
-    if (estado === "entregado" && !dniOk) {
-      setMsg("Primero verifica el DNI del receptor.");
-      return;
-    }
-    setLoading(true);
-    const res = await fetch(`/api/envios/${id}/estado`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        estado,
-        nota: estado === "observacion"
-          ? "Sin respuesta / ausente"
-          : "Entrega confirmada con DNI verificado",
-      }),
-    });
-    setLoading(false);
-    if (res.ok) router.push("/trans/mis-envios");
-    else setMsg("Error al confirmar. Intenta de nuevo.");
+  if (estado === "entregado" && !dniOk && !otraPersona) {
+    setMsg("Primero verifica el DNI del receptor o marca que recibe otra persona.");
+    return;
   }
+  if (estado === "entregado" && otraPersona && !receptorNombre) {
+    setMsg("Ingresa el nombre del receptor alternativo.");
+    return;
+  }
+  setLoading(true);
+
+  const nota = otraPersona
+    ? `Recibio: ${receptorNombre}${receptorDni ? ` DNI ${receptorDni}` : ""}${receptorHora ? ` a las ${receptorHora}` : ""}`
+    : estado === "observacion"
+    ? "Sin respuesta / ausente"
+    : "Entrega confirmada con DNI verificado";
+
+  const res = await fetch(`/api/envios/${id}/estado`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      estado,
+      nota,
+      receptorNombre: otraPersona ? receptorNombre : undefined,
+      receptorDni: otraPersona ? receptorDni : undefined,
+      receptorHora: otraPersona ? receptorHora : undefined,
+    }),
+  });
+  setLoading(false);
+  if (res.ok) router.push("/trans/mis-envios");
+  else setMsg("Error al confirmar. Intenta de nuevo.");
+}
 
   function abrirWhatsApp() {
     if (!envio) return;
@@ -302,14 +318,67 @@ export default function EntregaPage() {
         <p className="text-xs text-red-500 bg-red-50 px-3 py-2 rounded-lg mb-3">{msg}</p>
       )}
 
+      {/* Receptor alternativo */}
+          <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={otraPersona}
+                onChange={e => setOtraPersona(e.target.checked)}
+                className="w-4 h-4 accent-amber-600"
+              />
+              <span className="text-sm font-medium text-gray-700">
+                Recibe otra persona (encargado, portero, familiar)
+              </span>
+            </label>
+
+            {otraPersona && (
+              <div className="mt-3 space-y-2">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Nombre y apellido del receptor *</label>
+                  <input
+                    value={receptorNombre}
+                    onChange={e => setReceptorNombre(e.target.value)}
+                    placeholder="Juan Perez"
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">DNI del receptor</label>
+                    <input
+                      inputMode="numeric"
+                      value={receptorDni}
+                      onChange={e => setReceptorDni(e.target.value)}
+                      placeholder="Sin puntos"
+                      className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Hora de recepcion</label>
+                    <input
+                      type="time"
+                      value={receptorHora}
+                      onChange={e => setReceptorHora(e.target.value)}
+                      className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-amber-600">
+                  Al confirmar con otra persona no se requiere verificacion de DNI del comprador original.
+                </p>
+              </div>
+            )}
+          </div>
+
       {/* Botones de accion — solo si esta en camino */}
       {estaEnCamino && (
         <div className="space-y-3">
           <button
-            onClick={() => confirmar("entregado")}
-            disabled={loading || !dniOk}
-            className="w-full bg-green-700 text-white font-medium py-3 rounded-xl hover:bg-green-800 disabled:opacity-50 text-sm"
-          >
+              onClick={() => confirmar("entregado")}
+              disabled={loading || (!dniOk && !otraPersona) || (otraPersona && !receptorNombre)}
+              className="w-full bg-green-700 text-white font-medium py-3 rounded-xl hover:bg-green-800 disabled:opacity-50 text-sm"
+            >
             {loading ? "Confirmando..." : "Confirmar entrega"}
           </button>
           <button

@@ -142,6 +142,9 @@ model Envio {
   entregaEntreCalles  String? @map("entrega_entre_calles")
   entregaProvincia    String? @map("entrega_provincia")
   entregaPartido      String? @map("entrega_partido")
+  receptorNombre    String? @map("receptor_nombre")
+  receptorDni       String? @map("receptor_dni")
+  receptorHora      String? @map("receptor_hora")
 
   trackingToken String @unique @default(uuid()) @map("tracking_token")
 
